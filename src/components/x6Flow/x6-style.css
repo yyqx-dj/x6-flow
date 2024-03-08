@@ -1,0 +1,22 @@
+.x6-node[data-shape='dag-node'] {
+  &.available {
+    .dag-task-body {
+      stroke: #288fff;
+      stroke-width: 1;
+      stroke-dasharray: 5, 2;
+    }
+    &.adsorbed {
+      .dag-task-body {
+        stroke-width: 3;
+      }
+    }
+  }
+}
+
+[class*="dag-light"] {
+  --custom-disable-bg: #f3f3f5
+}
+
+[class*="dag-dark"] {
+  --custom-disable-bg: #d3d3d3
+}
