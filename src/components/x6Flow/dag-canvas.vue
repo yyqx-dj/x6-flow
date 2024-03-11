@@ -13,17 +13,28 @@
 
 <script>
 import { Graph, Shape } from "@antv/x6";
+import { DagreLayout, GridLayout } from "@antv/layout";
 import { nanoid } from "nanoid";
 import { NODE, EDGE, X6_NODE_NAME, X6_EDGE_NAME } from "./dag-config";
 import { updateCellStyle } from "./cell-active";
 import tl from "./img/tl.png";
 import antv from "./img/antv.png";
 import ContextMenuTool from "./dag-context-menu";
-
+import { DataUri } from "@antv/x6";
+// import { useFullscreen } from "@vueuse/core";
 import dagre from "dagre";
 import "./index.css";
 import "./x6-style.css";
 
+// const { isFullscreen, toggle } = useFullscreen();
+const DEFAULT_LAYOUT_CONFIG = {
+  cols: 0,
+  nodesep: 50,
+  padding: 50,
+  ranksep: 50,
+  rows: 0,
+  type: "dagre",
+};
 // 布局方向
 const dir = "LR"; // LR RL TB BT
 const data = {
@@ -84,7 +95,7 @@ const data = {
   ],
   edges: [
     {
-      shape: "edge",
+      shape: "dag-edge",
       source: "node1",
       target: "node2",
       // label: "x6",
@@ -97,7 +108,7 @@ const data = {
       },
     },
     {
-      shape: "edge",
+      shape: "dag-edge",
       source: "node2",
       target: "node3",
       // label: "x6",
@@ -114,7 +125,7 @@ const data = {
 
 export default {
   name: "dag-canvas",
-  props: ["addNodeItem"],
+  props: ["addNodeItem", "layoutFormValue", "searchSelectValue"],
   components: {
     ContextMenuTool: "ContextMenuTool",
   },
@@ -218,16 +229,19 @@ export default {
       });
     });
     this.registerCustomCells();
+
+    //
     // this.graph.fromJSON(data); // 渲染元素
-    this.layout();
-    this.graph.zoomTo(0.7);
-    this.graph.centerContent();
+    // this.format();
+    // this.graph.zoomTo(0.7);
+    // this.graph.centerContent();
   },
   methods: {
+    //初始化画布
     initGraph() {
       return new Graph({
         container: document.getElementById("container"),
-        selecting: {
+        selecting: { //框选
           enabled: true,
           multiple: true,
           rubberband: true,
@@ -244,14 +258,15 @@ export default {
           enabled: true,
           modifiers: ["ctrl", "meta"],
         },
-        panning: true,
-        scroller: true,
+        // panning: true, //拖拽画布
+       
         grid: {
           //网格背景
           size: 10,
           visible: true,
         },
-        snapline: true,
+        snapline: true, //对齐线
+        scroller: true, //和panning不可同时用，冲突
         minimap: {
           enabled: true,
           container: document.getElementById("minimap"),
@@ -385,7 +400,7 @@ export default {
       newNode = graph.addNode(node);
       return newNode;
     },
-
+    //节点拖拽结束
     handleDrop(e) {
       console.log(e);
       e.preventDefault();
@@ -401,6 +416,8 @@ export default {
       // var data=e.dataTransfer.getData("Text");
       // e.target.appendChild(document.getElementById(data));
     },
+
+    //注册边/节点
     registerCustomCells() {
       Graph.unregisterNode(X6_NODE_NAME);
       Graph.unregisterEdge(X6_EDGE_NAME);
@@ -409,87 +426,199 @@ export default {
     },
 
     // 自动布局
-    layout() {
+    // layout() {
+    //   const nodes = this.graph.getNodes();
+    //   const edges = this.graph.getEdges();
+    //   const g = new dagre.graphlib.Graph();
+    //   g.setGraph({ rankdir: dir, nodesep: 16, ranksep: 16 });
+    //   g.setDefaultEdgeLabel(() => ({}));
+
+    //   const width = 260;
+    //   const height = 90;
+    //   nodes.forEach((node) => {
+    //     g.setNode(node.id, { width, height });
+    //   });
+
+    //   edges.forEach((edge) => {
+    //     const source = edge.getSource();
+    //     const target = edge.getTarget();
+    //     g.setEdge(source.cell, target.cell);
+    //   });
+
+    //   dagre.layout(g);
+
+    //   g.nodes().forEach((id) => {
+    //     const node = this.graph.getCellById(id);
+    //     if (node) {
+    //       const pos = g.node(id);
+    //       node.position(pos.x, pos.y);
+    //     }
+    //   });
+
+    //   edges.forEach((edge) => {
+    //     const source = edge.getSourceNode();
+    //     const target = edge.getTargetNode();
+    //     const sourceBBox = source.getBBox();
+    //     const targetBBox = target.getBBox();
+
+    //     if ((dir === "LR" || dir === "RL") && sourceBBox.y !== targetBBox.y) {
+    //       const gap =
+    //         dir === "LR"
+    //           ? targetBBox.x - sourceBBox.x - sourceBBox.width
+    //           : -sourceBBox.x + targetBBox.x + targetBBox.width;
+    //       const fix = dir === "LR" ? sourceBBox.width : 0;
+    //       const x = sourceBBox.x + fix + gap / 2;
+    //       edge.setVertices([
+    //         { x, y: sourceBBox.center.y },
+    //         { x, y: targetBBox.center.y },
+    //       ]);
+    //     } else if (
+    //       (dir === "TB" || dir === "BT") &&
+    //       sourceBBox.x !== targetBBox.x
+    //     ) {
+    //       const gap =
+    //         dir === "TB"
+    //           ? targetBBox.y - sourceBBox.y - sourceBBox.height
+    //           : -sourceBBox.y + targetBBox.y + targetBBox.height;
+    //       const fix = dir === "TB" ? sourceBBox.height : 0;
+    //       const y = sourceBBox.y + fix + gap / 2;
+    //       edge.setVertices([
+    //         { x: sourceBBox.center.x, y },
+    //         { x: targetBBox.center.x, y },
+    //       ]);
+    //     } else {
+    //       edge.setVertices([]);
+    //     }
+    //   });
+    // },
+    // 保存
+    onSave() {
       const nodes = this.graph.getNodes();
       const edges = this.graph.getEdges();
-      const g = new dagre.graphlib.Graph();
-      g.setGraph({ rankdir: dir, nodesep: 16, ranksep: 16 });
-      g.setDefaultEdgeLabel(() => ({}));
-
-      const width = 260;
-      const height = 90;
-      nodes.forEach((node) => {
-        g.setNode(node.id, { width, height });
-      });
-
-      edges.forEach((edge) => {
-        const source = edge.getSource();
-        const target = edge.getTarget();
-        g.setEdge(source.cell, target.cell);
-      });
-
-      dagre.layout(g);
-
-      g.nodes().forEach((id) => {
-        const node = this.graph.getCellById(id);
-        if (node) {
-          const pos = g.node(id);
-          node.position(pos.x, pos.y);
-        }
-      });
-
-      edges.forEach((edge) => {
-        const source = edge.getSourceNode();
-        const target = edge.getTargetNode();
-        const sourceBBox = source.getBBox();
-        const targetBBox = target.getBBox();
-
-        if ((dir === "LR" || dir === "RL") && sourceBBox.y !== targetBBox.y) {
-          const gap =
-            dir === "LR"
-              ? targetBBox.x - sourceBBox.x - sourceBBox.width
-              : -sourceBBox.x + targetBBox.x + targetBBox.width;
-          const fix = dir === "LR" ? sourceBBox.width : 0;
-          const x = sourceBBox.x + fix + gap / 2;
-          edge.setVertices([
-            { x, y: sourceBBox.center.y },
-            { x, y: targetBBox.center.y },
-          ]);
-        } else if (
-          (dir === "TB" || dir === "BT") &&
-          sourceBBox.x !== targetBBox.x
-        ) {
-          const gap =
-            dir === "TB"
-              ? targetBBox.y - sourceBBox.y - sourceBBox.height
-              : -sourceBBox.y + targetBBox.y + targetBBox.height;
-          const fix = dir === "TB" ? sourceBBox.height : 0;
-          const y = sourceBBox.y + fix + gap / 2;
-          edge.setVertices([
-            { x: sourceBBox.center.x, y },
-            { x: targetBBox.center.x, y },
-          ]);
-        } else {
-          edge.setVertices([]);
-        }
-      });
+      console.log(nodes);
+      console.log(edges);
     },
-    // 保存
-    onSave(){
-     const nodes = this.graph.getNodes()
-     const edges = this.graph.getEdges()
-     console.log(nodes)
-     console.log(edges)
-     
-    },
-    onRemove(){
+
+    //删除所选节点或边
+    onRemove() {
       if (this.graph) {
-        const cells = this.graph.getSelectedCells()
-        if (cells) {  
-          this.graph?.removeCells(cells)
+        const cells = this.graph.getSelectedCells();
+        if (cells) {
+          this.graph?.removeCells(cells);
         }
       }
-    }
+    },
+    //下载
+    onDownload(options = { fileName: "dag", bgColor: "#f2f3f7" }) {
+      const { fileName, bgColor } = options;
+      this.graph?.toPNG(
+        (dataUri) => {
+          DataUri.downloadDataUri(dataUri, `${fileName}.png`);
+        },
+        {
+          padding: {
+            top: 50,
+            right: 50,
+            bottom: 50,
+            left: 50,
+          },
+          backgroundColor: bgColor,
+        }
+      );
+    },
+    //格式化
+    format() {
+      if (this.layoutFormValue) {
+        this.layout({ ...this.layoutFormValue, ...DEFAULT_LAYOUT_CONFIG });
+      } else {
+        this.layout({});
+      }
+    },
+
+    //格式化布局
+    layout(layoutConfig) {
+      if (Object.keys(layoutConfig).length === 0) {
+        layoutConfig = DEFAULT_LAYOUT_CONFIG;
+      }
+      if (!this.graph) {
+        return;
+      }
+
+      this.graph.cleanSelection();
+
+      let layoutFunc = null;
+      if (layoutConfig.type === "dagre") {
+        layoutFunc = new DagreLayout({
+          type: "dagre",
+          rankdir: "LR",
+          align: "UL",
+          // Calculate the node spacing based on the edge label length
+          ranksepFunc: (d) => {
+            const edges = this.graph.getOutgoingEdges(d.id);
+            let max = 0;
+            if (edges && edges.length > 0) {
+              edges.forEach((edge) => {
+                const edgeView = this.graph.findViewByCell(edge); //findViewByCell:根据节点/边 ID 或实例查找对应的视图。
+                const labelView = edgeView?.findAttr(
+                  "width",
+                  _.get(edgeView, ["labelSelectors", "0", "body"], null)
+                );
+                const labelWidth = labelView ? +labelView : 0;
+                max = Math.max(max, labelWidth);
+              });
+            }
+            return layoutConfig.ranksep + max;
+          },
+          nodesep: layoutConfig.nodesep,
+          controlPoints: true,
+        });
+      } else if (layoutConfig.type === "grid") {
+        layoutFunc = new GridLayout({
+          type: "grid",
+          preventOverlap: true,
+          preventOverlapPadding: layoutConfig.padding,
+          sortBy: "_index",
+          rows: layoutConfig.rows || undefined,
+          cols: layoutConfig.cols || undefined,
+          nodeSize: 220,
+        });
+      }
+
+      const json = this.graph.toJSON();
+      console.log("json=======", json);
+      const nodes = json.cells
+        .filter((cell) => cell.shape === X6_NODE_NAME)
+        .map((item) => {
+          return {
+            ...item,
+            // sort by code aesc
+            _index: -item.id,
+          };
+        });
+      const edges = json.cells.filter((cell) => cell.shape === "edge");
+      const newModel = layoutFunc?.layout({
+        nodes: nodes,
+        edges: edges,
+      });
+      this.graph.fromJSON(newModel);
+    },
+
+    //搜索下拉框
+    getAllNodes() {
+      const nodes = this.graph.getNodes();
+      console.log("nodes", nodes);
+      this.$emit("getDropdownNodes", nodes);
+    },
+
+    //搜索
+    navigateTo() {
+      const code = this.searchSelectValue;
+      if (!this.graph) return;
+      const cell = this.graph.getCellById(code);
+      this.graph.scrollToCell(cell, { animation: { duration: 600 } });
+      this.graph.cleanSelection();
+      this.graph.select(cell);
+    },
   },
 };
 </script>
