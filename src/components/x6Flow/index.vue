@@ -21,6 +21,7 @@
       :layoutFormValue="layoutFormValue"
       :searchSelectValue="searchSelectValue"
       @getDropdownNodes="getDropdownNodes"
+      @handleEditNodeItem="handleEditNodeItem"
       ></dag-canvas>
     </div>
 
@@ -29,6 +30,13 @@
     :visible="layoutVisible" 
     :layoutFormValue="layoutFormValue"
     @submit="onSubmit"/>
+
+
+    <!-- <dag-node-data-modal 
+      ref="nodeDataModal"
+     :visible="addNodeVisible" 
+     @addSubmit="onAddSubmit"
+    /> -->
   </div>
 </template>
 
@@ -37,6 +45,7 @@ import dagSidebar from './dag-sidebar.vue'
 import dagCanvas from './dag-canvas.vue';
 import dagToolbar from './dag-toolbar.vue';
 import dagAutoLayoutModalVue from './dag-auto-layout-modal.vue';
+import dagNodeDataModalVue from './dag-node-data-modal.vue';
 // import './dag-module.scss';
 
 export default {
@@ -46,6 +55,7 @@ export default {
     "dag-sidebar": dagSidebar,
     "dag-toolbar": dagToolbar,
     "dag-auto-layout-modal": dagAutoLayoutModalVue,
+    "dag-node-data-modal": dagNodeDataModalVue,
   },
   data() {
     return {
@@ -56,13 +66,18 @@ export default {
       searchInputVisible: false,
       dropdownNodes:[],
       searchSelectValue: '',
+      addNodeVisible: false,
+     
     };
   },
   methods:{
     handleDragStart({e,node}){
       console.log('拖拽开始',e,node)
       this.addNodeItem = node
-      
+            
+    },
+    handleEditNodeItem(values){
+      this.addNodeItem = {...values}
     },
     onSave(){
        console.log(this.$refs.canvas)
@@ -87,6 +102,7 @@ export default {
       })
        
     },
+  
     onSearchInputVisible(){
       this.searchInputVisible = !this.searchInputVisible;
       this.$refs.canvas.getAllNodes()

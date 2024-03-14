@@ -19,7 +19,7 @@ export const PORT = {
       position: {
         name: 'absolute',
         args: {
-          x: 180,
+          x: 200,
           y: 24
         }
       },
@@ -123,26 +123,26 @@ export const NODE_STATUS_MARKUP = [
 ]
 
 export const NODE = {
-  width: 200,
-  height: 58,
+  width: 220,
+  height: 48,
   markup: [
     {
       tagName: 'rect',
       selector: 'body',
       className: 'dag-task-body'
     },
-    // {
-    //   tagName: 'image',
-    //   selector: 'image'
-    // },
+    {
+      tagName: 'image',
+      selector: 'image'
+    },
     {
       tagName: 'text',
       selector: 'title'
     },
-    {
-      tagName: 'text',
-      selector: 'content'
-    },
+    // {
+    //   tagName: 'text',
+    //   selector: 'content'
+    // },
   ],
   attrs: {
     body: {
@@ -158,8 +158,8 @@ export const NODE = {
       filter: 'none'
     },
     image: {
-      'xlink:href':
-          'https://gw.alipayobjects.com/zos/antfincdn/FLrTNDvlna/antv.png',
+      // 'xlink:href':
+      //     'https://gw.alipayobjects.com/zos/antfincdn/FLrTNDvlna/antv.png',
       width: 30,
       height: 30,
       refX: 12,
@@ -167,22 +167,22 @@ export const NODE = {
     },
     title: {
       refX: 45,
-      refY: 12,
+      refY: 18,
       fontFamily: 'Microsoft Yahei',
       fontSize: 15,
       fontWeight: 'bold',
       fill: TITLE,
       strokeWidth: 0
     },
-    content: {
-      text: '1111',
-      refX: 45,
-      refY: 38,
-      fontFamily: 'Microsoft Yahei',
-      fontSize: 15,
-      fill: CONTENT,
-      strokeWidth: 0
-    },
+    // content: {
+    //   // text: '1111',
+    //   refX: 45,
+    //   refY: 38,
+    //   fontFamily: 'Microsoft Yahei',
+    //   fontSize: 15,
+    //   fill: CONTENT,
+    //   strokeWidth: 0
+    // },
     fo: {
       refX: '46%',
       refY: -25
@@ -341,4 +341,34 @@ export const EDGE_SELECTED = {
       }
     }
   }
+}
+
+
+export const truncateText = (text, n) => {
+  const exp = /[\u4E00-\u9FA5]/
+  let res = ''
+  let len = text.length
+  const chinese = text.match(new RegExp(exp, 'g'))
+  if (chinese) {
+    len += chinese.length
+  }
+  if (len > n) {
+    let i = 0
+    let acc = 0
+    while (true) {
+      const char = text[i]
+      if (exp.test(char)) {
+        acc += 2
+      } else {
+        acc++
+      }
+      if (acc > n) break
+      res += char
+      i++
+    }
+    res += '...'
+  } else {
+    res = text
+  }
+  return res
 }

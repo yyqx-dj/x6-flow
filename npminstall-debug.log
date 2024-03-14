@@ -3,8 +3,8 @@
   registry: 'https://registry.npmmirror.com',
   pkgs: [
     {
-      name: 'antdv',
-      version: '1.34.13',
+      name: 'node-sass',
+      version: '4.14.1',
       type: 'version',
       alias: undefined,
       arg: [Result]
@@ -15,7 +15,7 @@
   cacheDir: 'C:\\Users\\dj\\.npminstall_tarball',
   env: {
     npm_config_registry: 'https://registry.npmmirror.com',
-    npm_config_argv: '{"remain":[],"cooked":["--fix-bug-versions","--china","--userconfig=C:\\\\Users\\\\dj\\\\.cnpmrc","--disturl=https://cdn.npmmirror.com/binaries/node","--registry=https://registry.npmmirror.com","antdv@1.34.13"],"original":["--fix-bug-versions","--china","--userconfig=C:\\\\Users\\\\dj\\\\.cnpmrc","--disturl=https://cdn.npmmirror.com/binaries/node","--registry=https://registry.npmmirror.com","antdv@1.34.13"]}',
+    npm_config_argv: '{"remain":[],"cooked":["--fix-bug-versions","--china","--userconfig=C:\\\\Users\\\\dj\\\\.cnpmrc","--disturl=https://cdn.npmmirror.com/binaries/node","--registry=https://registry.npmmirror.com","node-sass@4.14.1","--save-dev"],"original":["--fix-bug-versions","--china","--userconfig=C:\\\\Users\\\\dj\\\\.cnpmrc","--disturl=https://cdn.npmmirror.com/binaries/node","--registry=https://registry.npmmirror.com","node-sass@4.14.1","--save-dev"]}',
     npm_config_user_agent: 'npminstall/7.11.1 npm/? node/v16.10.0 win32 x64',
     npm_config_cache: 'C:\\Users\\dj\\.npminstall_tarball',
     NODE: 'C:\\Program Files\\nodejs\\node.exe',

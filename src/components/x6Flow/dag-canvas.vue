@@ -8,6 +8,22 @@
   >
     <div id="container"></div>
     <div id="minimap"></div>
+
+    <dag-context-menu
+      :visible="nodeVariables.menuVisible"
+      :left="nodeVariables.pageX"
+      :top="nodeVariables.pageY"
+      @copyTask="copyTask"
+      @remove="remove"
+      @edit="edit"
+    />
+
+    <dag-node-data-modal
+      ref="nodeDataModal"
+      :visible="nodeinfo.visible"
+      :flag="nodeinfo.flag"
+      @addSubmit="onAddSubmit"
+    />
   </div>
 </template>
 
@@ -15,16 +31,17 @@
 import { Graph, Shape } from "@antv/x6";
 import { DagreLayout, GridLayout } from "@antv/layout";
 import { nanoid } from "nanoid";
-import { NODE, EDGE, X6_NODE_NAME, X6_EDGE_NAME } from "./dag-config";
+import { NODE, EDGE, X6_NODE_NAME, X6_EDGE_NAME,truncateText } from "./dag-config";
 import { updateCellStyle } from "./cell-active";
 import tl from "./img/tl.png";
 import antv from "./img/antv.png";
+import shell from './images/task-icons/shell.png'
 import ContextMenuTool from "./dag-context-menu";
+import dagNodeDataModalVue from "./dag-node-data-modal.vue";
 import { DataUri } from "@antv/x6";
 // import { useFullscreen } from "@vueuse/core";
 import dagre from "dagre";
-import "./index.css";
-import "./x6-style.css";
+import './x6-style.css'
 
 // const { isFullscreen, toggle } = useFullscreen();
 const DEFAULT_LAYOUT_CONFIG = {
@@ -125,17 +142,35 @@ const data = {
 
 export default {
   name: "dag-canvas",
-  props: ["addNodeItem", "layoutFormValue", "searchSelectValue"],
+  props: ["addNodeItem", "layoutFormValue", "searchSelectValue", "flag"],
   components: {
-    ContextMenuTool: "ContextMenuTool",
+    "dag-context-menu": ContextMenuTool,
+    "dag-node-data-modal": dagNodeDataModalVue,
   },
   data() {
     return {
       graph: null,
       hoverCell: {},
+      nodeVariables: {
+        menuCell: "",
+        pageX: "",
+        pageY: "",
+        menuVisible: false,
+      },
+      nodePosition: {
+        x: 0,
+        y: 0,
+      },
+      nodeinfo: {
+        visible: false,
+        flag: "add",
+      },
     };
   },
   mounted() {
+    document.addEventListener("click", () => {
+      this.hide();
+    });
     // Graph.registerNodeTool('contextmenu', ContextMenuTool, true)
     this.graph = this.initGraph();
     // // Make sure the edge starts with node, not port
@@ -228,6 +263,20 @@ export default {
         }
       });
     });
+    this.graph.on("node:contextmenu", ({ cell, x, y }) => {
+      console.log('右键cell',cell)
+      this.nodeVariables.menuCell = cell;
+      const data = this.graph.localToPage(x, y);
+      this.nodeVariables.pageX = data.x;
+      this.nodeVariables.pageY = data.y;
+
+      // show menu
+      this.nodeVariables.menuVisible = true;
+
+      // lock scroller
+      this.graph.lockScroller();
+    });
+
     this.registerCustomCells();
 
     //
@@ -237,11 +286,51 @@ export default {
     // this.graph.centerContent();
   },
   methods: {
+    //拖拽生成新节点modal
+    onAddSubmit(values) {
+      if (this.nodeinfo.flag === "add") {
+        if (values) {
+          let nodeData = { ...values,type: this.addNodeItem.type };
+          let data = { ...this.addNodeItem, data: nodeData };
+          this.$emit("handleEditNodeItem", data);
+          this.$nextTick(() => {
+            this.handleDropAddNode();
+            this.nodeinfo.visible = false;
+          });
+        } else {
+          this.nodeinfo.visible = false;
+        }
+         this.$refs.nodeDataModal.form.resetFields();
+      } else if (this.nodeinfo.flag === "edit") {
+        if(values){
+          const node = this.nodeVariables.menuCell;  //右键的节点
+          if (node) {
+            node.setData({ name: values.name });  //更新业务信息
+            node.attr('title/text', truncateText(values.name,18))
+          }
+        }
+       
+         this.nodeinfo.visible = false;
+         this.$refs.nodeDataModal.form.resetFields();
+         this.nodeinfo.flag = "add"
+      }
+     
+    },
+    onAddNodeModalShow() {
+      this.nodeinfo.visible = true;
+    },
+    //点击画布任意处隐藏右键菜单
+    hide() {
+      this.nodeVariables.menuVisible = false;
+      // unlock scroller
+      this.graph.value?.unlockScroller();
+    },
     //初始化画布
     initGraph() {
       return new Graph({
         container: document.getElementById("container"),
-        selecting: { //框选
+        selecting: {
+          //框选
           enabled: true,
           multiple: true,
           rubberband: true,
@@ -259,7 +348,7 @@ export default {
           modifiers: ["ctrl", "meta"],
         },
         // panning: true, //拖拽画布
-       
+
         grid: {
           //网格背景
           size: 10,
@@ -314,7 +403,6 @@ export default {
               if (!sourceData) return true;
               if (sourceData.taskType !== "CONDITIONS") return true;
               const edges = graph?.getConnectedEdges(sourceCell);
-              console.log("edges", edges);
               if (!edges || edges.length < 2) return true;
               let len = 0;
               return !edges.some((edge) => {
@@ -390,10 +478,15 @@ export default {
         data: { ...nodeItem.data },
         attrs: {
           title: {
-            text: nodeItem.data.name,
+            text: truncateText(nodeItem.data.name,18),
           },
           image: {
-            "xlink:href": tl,
+            'xlink:href': `${
+            window.location.origin
+            }${window.location.pathname}images/task-icons/${(type !== ('FLINK_STREAM')
+            ? type
+            : 'FLINK'
+          ).toLocaleLowerCase()}.png`
           },
         },
       };
@@ -405,18 +498,25 @@ export default {
       console.log(e);
       e.preventDefault();
       const { x, y } = this.graph.clientToLocal(e.clientX, e.clientY);
+      this.nodePosition.x = x;
+      this.nodePosition.y = y;
+      // this.createNode(
+      //   this.addNodeItem.type,
+      //   this.graph,
+      //   { x, y },
+      //   this.addNodeItem
+      // );
+      this.onAddNodeModalShow();
+    },
+    //
+    handleDropAddNode() {
       this.createNode(
-        this.addNodeItem.data.type,
+        this.addNodeItem.type,
         this.graph,
-        { x, y },
+        this.nodePosition,
         this.addNodeItem
       );
-
-      // 将拖动元素旋转到目标区域中
-      // var data=e.dataTransfer.getData("Text");
-      // e.target.appendChild(document.getElementById(data));
     },
-
     //注册边/节点
     registerCustomCells() {
       Graph.unregisterNode(X6_NODE_NAME);
@@ -491,8 +591,11 @@ export default {
     //     }
     //   });
     // },
-    // 保存
-    onSave() {
+   
+  
+  // -------------------------------------工具栏事件-----------------------------------------------------------
+   // 保存
+  onSave() {
       const nodes = this.graph.getNodes();
       const edges = this.graph.getEdges();
       console.log(nodes);
@@ -585,7 +688,6 @@ export default {
       }
 
       const json = this.graph.toJSON();
-      console.log("json=======", json);
       const nodes = json.cells
         .filter((cell) => cell.shape === X6_NODE_NAME)
         .map((item) => {
@@ -619,6 +721,51 @@ export default {
       this.graph.cleanSelection();
       this.graph.select(cell);
     },
+
+// ------------------------------右键菜单事件-----------------------------------------------------
+    //复制节点
+    copyTask() {
+      const nodeData = this.nodeVariables.menuCell.getData();
+      console.log("nodeData", nodeData);
+      if (!this.graph) {
+        return {};
+      }
+      let newNode = {};
+      const id = nanoid();
+      const node = {
+        id,
+        shape: X6_NODE_NAME,
+        x: this.nodeVariables.pageX + 100,
+        y: this.nodeVariables.pageY + 100,
+        data: {
+          ...nodeData.data,
+          name: `${nodeData.name}_${id.slice(0, 3)}`,
+        },
+        attrs: {
+          title: {
+            text: `${nodeData.name}_${id.slice(0, 3)}`,
+          },
+          image: {
+            "xlink:href": tl,
+          },
+        },
+      };
+      newNode = this.graph.addNode(node);
+      return newNode;
+    },
+    //删除节点
+    remove() {
+      this.graph?.removeCell(this.nodeVariables.menuCell);
+    },
+    //编辑
+    edit() {
+      this.nodeinfo.visible = true;
+      this.nodeinfo.flag = "edit";
+      let data = this.nodeVariables.menuCell.getData();
+      this.$refs.nodeDataModal.form.setFieldsValue({
+        name: data.name,
+      });
+    },
   },
 };
 </script>
@@ -638,4 +785,6 @@ export default {
   border: dashed 1px #e4e4e4;
   z-index: 9;
 }
+
+
 </style>

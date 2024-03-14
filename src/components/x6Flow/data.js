@@ -1,36 +1,33 @@
 export const nodeType = [
   {
-    id: "node1",
-    shape: "dag-node",
-    data: {
-      name: "节点1",
-      type: '1',
-    },
    
+   type: "shell"
   },
   {
-    id: "node2",
-    shape: "dag-node",
-    data: {
-      name: "节点2",
-      type: '2',
-    },
+    type: 'SUB_PROCESS'
+  },
+  {
+    type: 'PROCEDURE'
+  },
+
+  {
+   type: "sql"
   
   },
   {
-    id: "node3",
-    shape: "dag-node",
-    data: {
-      name: "节点3",
-      type: '3',
-    },
+   type: "SPARK"
+  
   },
   {
-    id: "node4",
-    shape: "dag-node",
-    data: {
-      name: "节点4",
-      type: '4',
-    },
+    type: 'flink'
   },
+  
+  // {
+  //   id: "node4",
+  //   shape: "dag-node",
+  //   data: {
+  //     name: "节点4",
+  //     type: '4',
+  //   },
+  // },
 ]

@@ -60,11 +60,11 @@ export function setNodeStyle(graph,node,hoverCell) {
   let portAttrs = null
 
   if (isHover || isSelected) {
-    // img = `${import.meta.env.BASE_URL}images/task-icons/${(node.data
-    //   .taskType !== 'FLINK_STREAM'
-    //   ? node.data.taskType
-    //   : 'FLINK'
-    // ).toLocaleLowerCase()}_hover.png`
+    img = `${window.location.origin}${window.location.pathname}images/task-icons/${(node.data
+      .type !== 'FLINK_STREAM'
+      ? node.data.type
+      : 'FLINK'
+    ).toLocaleLowerCase()}_hover.png`
     if (isHover) {
       nodeAttrs = nodeHover
       portAttrs = _.merge(portDefault, portHover)
@@ -73,15 +73,15 @@ export function setNodeStyle(graph,node,hoverCell) {
       portAttrs = _.merge(portDefault, portSelected)
     }
   } else {
-    // img = `${import.meta.env.BASE_URL}images/task-icons/${(node.data
-    //   .taskType !== 'FLINK_STREAM'
-    //   ? node.data.taskType
-    //   : 'FLINK'
-    // ).toLocaleLowerCase()}.png`
+    img = `${window.location.origin}${window.location.pathname}images/task-icons/${(node.data
+      .type !== 'FLINK_STREAM'
+      ? node.data.type
+      : 'FLINK'
+    ).toLocaleLowerCase()}.png`
     nodeAttrs = NODE.attrs
     portAttrs = portDefault
   }
-  // node.setAttrByPath('image/xlink:href', img)
+  node.setAttrByPath('image/xlink:href', img)
   node.setAttrs(nodeAttrs)
   node.setPortProp(X6_PORT_OUT_NAME, 'attrs', portAttrs)
 }
