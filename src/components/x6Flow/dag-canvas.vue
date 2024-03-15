@@ -31,17 +31,25 @@
 import { Graph, Shape } from "@antv/x6";
 import { DagreLayout, GridLayout } from "@antv/layout";
 import { nanoid } from "nanoid";
-import { NODE, EDGE, X6_NODE_NAME, X6_EDGE_NAME,truncateText } from "./dag-config";
+import {
+  NODE,
+  EDGE,
+  X6_NODE_NAME,
+  X6_EDGE_NAME,
+  truncateText,
+} from "./dag-config";
 import { updateCellStyle } from "./cell-active";
 import tl from "./img/tl.png";
 import antv from "./img/antv.png";
-import shell from './images/task-icons/shell.png'
+import shell from "./images/task-icons/shell.png";
 import ContextMenuTool from "./dag-context-menu";
 import dagNodeDataModalVue from "./dag-node-data-modal.vue";
 import { DataUri } from "@antv/x6";
 // import { useFullscreen } from "@vueuse/core";
 import dagre from "dagre";
-import './x6-style.css'
+import "./x6-style.css";
+import { useResizeObserver } from "@vueuse/core";
+import { debounce } from "lodash";
 
 // const { isFullscreen, toggle } = useFullscreen();
 const DEFAULT_LAYOUT_CONFIG = {
@@ -140,6 +148,15 @@ const data = {
   ],
 };
 
+// const container = document.getElementById('container');
+//  const resize = debounce(() => {
+//     if (container.value && true) {
+//       const w = container.value.offsetWidth
+//       const h = container.value.offsetHeight
+//       graph.value?.resize(w, h)
+//     }
+//   }, 200)
+//   useResizeObserver(container, resize)
 export default {
   name: "dag-canvas",
   props: ["addNodeItem", "layoutFormValue", "searchSelectValue", "flag"],
@@ -171,8 +188,12 @@ export default {
     document.addEventListener("click", () => {
       this.hide();
     });
+    document.addEventListener("resize", () => {
+      this.resize();
+    });
     // Graph.registerNodeTool('contextmenu', ContextMenuTool, true)
     this.graph = this.initGraph();
+
     // // Make sure the edge starts with node, not port
     this.graph.on("edge:connected", ({ isNew, edge }) => {
       console.log("edge", edge);
@@ -198,6 +219,12 @@ export default {
     // select
     this.graph.on("cell:selected", ({ cell }) => {
       updateCellStyle(this.graph, cell, this.hoverCell);
+      if(cell.isNode){
+        const edge = this.graph.getIncomingEdges(cell)
+        console.log('edge',edge)
+        this.graph.select(edge)
+      }
+       
     });
     this.graph.on("cell:unselected", ({ cell }) => {
       updateCellStyle(this.graph, cell, this.hoverCell);
@@ -234,37 +261,35 @@ export default {
       node.removeTool("button");
     });
 
-    this.graph.on("node:click", ({ node }) => {
-      console.log("单击节点", node);
-      const nodes = this.graph.getNodes();
-      const edges = this.graph.getEdges();
-      const data = node.getData();
-      // nodes.forEach((n) => {
-      //   let icon = n.getAttrs().image["xlink:href"];
-      //   if (n.id === node.id) {
-      //     n.attr("body/stroke", "#1890ff");
-      //     n.attr("title/fill", "#1890ff");
-      //     n.attr("image/xlink:href", antv);
-      //   } else {
-      //     n.attr("body/stroke", "#ccc");
-      //     n.attr("title/fill", "#333");
-      //     n.attr("image/xlink:href", data.iconUrl);
-      //   }
-      // });
-
-      edges.forEach((edge) => {
-        console.log("3", edge.getTargetNode());
-        if (edge.getTargetNode().id === node.id) {
-          edge.attr("line/stroke", "#1890ff");
-          edge.attr("line/targetMarker/fill", "#1890ff");
-        } else {
-          edge.attr("line/stroke", "#A2B1C3");
-          edge.attr("line/targetMarker/fill", "#A2B1C3");
-        }
-      });
-    });
+    // this.graph.on("node:click", ({ node }) => {
+    //   console.log("单击节点", node);
+    //   const nodes = this.graph.getNodes();
+    //   const edges = this.graph.getEdges();
+    //   const data = node.getData();
+    //   // nodes.forEach((n) => {
+    //   //   let icon = n.getAttrs().image["xlink:href"];
+    //   //   if (n.id === node.id) {
+    //   //     n.attr("body/stroke", "#1890ff");
+    //   //     n.attr("title/fill", "#1890ff");
+    //   //     n.attr("image/xlink:href", antv);
+    //   //   } else {
+    //   //     n.attr("body/stroke", "#ccc");
+    //   //     n.attr("title/fill", "#333");
+    //   //     n.attr("image/xlink:href", data.iconUrl);
+    //   //   }
+    //   // });
+    //     this.graph.resetSelection();
+    //   edges.forEach((edge) => {
+    //     console.log("3", edge.getTargetNode());
+    //     if (edge.getTargetNode().id === node.id) {
+    //       // edge.attr("line/stroke", "#1890ff");
+    //       // edge.attr("line/targetMarker/fill", "#1890ff");
+    //       this.graph.select(edge)
+    //     }
+    //   });
+    // });
     this.graph.on("node:contextmenu", ({ cell, x, y }) => {
-      console.log('右键cell',cell)
+      console.log("右键cell", cell);
       this.nodeVariables.menuCell = cell;
       const data = this.graph.localToPage(x, y);
       this.nodeVariables.pageX = data.x;
@@ -286,11 +311,20 @@ export default {
     // this.graph.centerContent();
   },
   methods: {
+    resize: debounce(function () {
+      const container = document.getElementById("container");
+      if (container.value && true) {
+        const w = container.value.offsetWidth;
+        const h = container.value.offsetHeight;
+        graph.value?.resize(w, h);
+      }
+    }, 200),
+
     //拖拽生成新节点modal
     onAddSubmit(values) {
       if (this.nodeinfo.flag === "add") {
         if (values) {
-          let nodeData = { ...values,type: this.addNodeItem.type };
+          let nodeData = { ...values, type: this.addNodeItem.type };
           let data = { ...this.addNodeItem, data: nodeData };
           this.$emit("handleEditNodeItem", data);
           this.$nextTick(() => {
@@ -300,21 +334,20 @@ export default {
         } else {
           this.nodeinfo.visible = false;
         }
-         this.$refs.nodeDataModal.form.resetFields();
+        this.$refs.nodeDataModal.form.resetFields();
       } else if (this.nodeinfo.flag === "edit") {
-        if(values){
-          const node = this.nodeVariables.menuCell;  //右键的节点
+        if (values) {
+          const node = this.nodeVariables.menuCell; //右键的节点
           if (node) {
-            node.setData({ name: values.name });  //更新业务信息
-            node.attr('title/text', truncateText(values.name,18))
+            node.setData({ name: values.name }); //更新业务信息
+            node.attr("title/text", truncateText(values.name, 18));
           }
         }
-       
-         this.nodeinfo.visible = false;
-         this.$refs.nodeDataModal.form.resetFields();
-         this.nodeinfo.flag = "add"
+
+        this.nodeinfo.visible = false;
+        this.$refs.nodeDataModal.form.resetFields();
+        this.nodeinfo.flag = "add";
       }
-     
     },
     onAddNodeModalShow() {
       this.nodeinfo.visible = true;
@@ -478,15 +511,15 @@ export default {
         data: { ...nodeItem.data },
         attrs: {
           title: {
-            text: truncateText(nodeItem.data.name,18),
+            text: truncateText(nodeItem.data.name, 18),
           },
           image: {
-            'xlink:href': `${
-            window.location.origin
-            }${window.location.pathname}images/task-icons/${(type !== ('FLINK_STREAM')
-            ? type
-            : 'FLINK'
-          ).toLocaleLowerCase()}.png`
+            "xlink:href": `${window.location.origin}${
+              window.location.pathname
+            }images/task-icons/${(type !== "FLINK_STREAM"
+              ? type
+              : "FLINK"
+            ).toLocaleLowerCase()}.png`,
           },
         },
       };
@@ -591,11 +624,10 @@ export default {
     //     }
     //   });
     // },
-   
-  
-  // -------------------------------------工具栏事件-----------------------------------------------------------
-   // 保存
-  onSave() {
+
+    // -------------------------------------工具栏事件-----------------------------------------------------------
+    // 保存
+    onSave() {
       const nodes = this.graph.getNodes();
       const edges = this.graph.getEdges();
       console.log(nodes);
@@ -722,7 +754,7 @@ export default {
       this.graph.select(cell);
     },
 
-// ------------------------------右键菜单事件-----------------------------------------------------
+    // ------------------------------右键菜单事件-----------------------------------------------------
     //复制节点
     copyTask() {
       const nodeData = this.nodeVariables.menuCell.getData();
@@ -773,6 +805,7 @@ export default {
 .dag-canvas {
   width: 85%;
   height: 100%;
+  position: relative;
 }
 #container {
   width: 100%;
@@ -785,6 +818,4 @@ export default {
   border: dashed 1px #e4e4e4;
   z-index: 9;
 }
-
-
 </style>
